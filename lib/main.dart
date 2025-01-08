@@ -1,8 +1,12 @@
 import 'dart:io';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:window_size/window_size.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
+import 'package:productivepls/tasksManager.dart';
+import 'package:productivepls/weekly.dart';
 
 void main() {
   //set fixed windows size
@@ -14,71 +18,6 @@ void main() {
     setWindowMinSize(prefSize);
   }
   runApp(TodoApp());
-}
-
-class Task {
-  String name;
-  bool isCompleted;
-
-  Task({required this.name, this.isCompleted = false});
-
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'is_completed': isCompleted,
-      };
-
-  factory Task.fromJson(Map<String, dynamic> json) => Task(
-        name: json['name'],
-        isCompleted: json['is_completed'],
-      );
-}
-
-class TaskStorage {
-  static const String _filePath = 'tasks.json';
-  Map<String, dynamic> _data = {
-    'currview': 'daily',
-  };
-
-  Future<void> load() async {
-    try {
-      final file = File(_filePath);
-      if (await file.exists()) {
-        final contents = await file.readAsString();
-        _data = json.decode(contents);
-      }
-    } catch (e) {
-      print('Error loading tasks: $e');
-    }
-  }
-
-  Future<void> save() async {
-    try {
-      final file = File(_filePath);
-      await file.writeAsString(json.encode(_data));
-    } catch (e) {
-      print('Error saving tasks: $e');
-    }
-  }
-
-  List<Task> getTasksForDate(String date) {
-    final List<dynamic> tasks = _data[date] ?? [];
-    return tasks.map((task) => Task.fromJson(task)).toList();
-  }
-
-  Future<void> addTask(String date, Task task) async {
-    if (!_data.containsKey(date)) {
-      _data[date] = [];
-    }
-    (_data[date] as List).add(task.toJson());
-    await save();
-  }
-
-  Future<void> updateTask(String date, int index, Task task) async {
-    if (_data.containsKey(date) && (_data[date] as List).length > index) {
-      (_data[date] as List)[index] = task.toJson();
-      await save();
-    }
-  }
 }
 
 class TodoApp extends StatelessWidget {
@@ -98,18 +37,22 @@ class TodoApp extends StatelessWidget {
 
 //Daily View Structure
 class DailyView extends StatefulWidget {
+  String? date;
+  DailyView({Key? key, this.date}) : super(key: key);
+
   @override
   _DailyViewState createState() => _DailyViewState();
 }
 
 class _DailyViewState extends State<DailyView> {
-  String currentDate = DateTime.now().toString().split(' ')[0];
+  late String currentDate;
   final TaskStorage storage = TaskStorage();
   late Future<List<Task>> tasks;
 
   @override
   void initState() {
     super.initState();
+    currentDate = widget.date ?? DateTime.now().toString().split(' ')[0];
     tasks = _loadTasks();
   }
 
@@ -171,53 +114,119 @@ class _DailyViewState extends State<DailyView> {
     );
   }
 
+  void _deleteTask(int index) async {
+    List<Task> taskList = await tasks;
+    taskList.removeAt(index); // Remove task from the list
+    storage.removeTask(currentDate, index);
+    // Update the storage after deleting the task
+    await storage.save();
+    setState(() {
+      tasks = _loadTasks(); // Reload tasks after deleting
+    });
+  }
+
+  void _changeDate(KeyEvent keyEvent) {
+    setState(() {
+      if (keyEvent.logicalKey == LogicalKeyboardKey.arrowUp) {
+        // Navigate to the previous day
+        currentDate = _getPreviousDate(currentDate);
+      } else if (keyEvent.logicalKey == LogicalKeyboardKey.arrowDown) {
+        // Navigate to the next day
+        currentDate = _getNextDate(currentDate);
+      }
+      tasks = _loadTasks(); // Reload tasks for the new date
+    });
+  }
+
+  String _getPreviousDate(String date) {
+    DateTime current = DateFormat('yyyy-MM-dd').parse(date);
+    DateTime previousDay = current.subtract(Duration(days: 1));
+    return DateFormat('yyyy-MM-dd').format(previousDay);
+  }
+
+  String _getNextDate(String date) {
+    DateTime current = DateFormat('yyyy-MM-dd').parse(date);
+    DateTime nextDay = current.add(Duration(days: 1));
+    return DateFormat('yyyy-MM-dd').format(nextDay);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Tasks for $currentDate'),
-      ),
-      body: FutureBuilder<List<Task>>(
-        future: tasks,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      onKeyEvent: (keyEvent) {
+        _changeDate(keyEvent); // Update date based on key event
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Tasks for $currentDate'),
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.view_week),
+              tooltip: 'Weekly View',
+              onPressed: () {
+                //navigate to weekly page
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => WeeklyView()));
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.calendar_month),
+              tooltip: 'Monthly View',
+              onPressed: () {
+                //navigate to monthly page
+              },
+            ),
+          ],
+        ),
+        body: FutureBuilder<List<Task>>(
+          future: tasks,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading tasks.'));
-          }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error loading tasks.'));
+            }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No tasks for today.'));
-          }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(child: Text('No tasks for today.'));
+            }
 
-          List<Task> taskList = snapshot.data!;
+            List<Task> taskList = snapshot.data!;
 
-          return ListView.builder(
-            itemCount: taskList.length,
-            itemBuilder: (context, index) {
-              final task = taskList[index];
-              return ListTile(
-                title: Text(task.name),
-                leading: Checkbox(
-                  value: task.isCompleted,
-                  onChanged: (bool? value) {
-                    _toggleTaskCompletion(index); // Use index to toggle
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
-      // FloatingActionButton to add tasks
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _addTask(context); // Show dialog to add task
-        },
-        backgroundColor: Colors.orange[800],
-        child: Icon(Icons.add, color: Colors.white),
+            return ListView.builder(
+              itemCount: taskList.length,
+              itemBuilder: (context, index) {
+                final task = taskList[index];
+                return ListTile(
+                  title: Text(task.name),
+                  leading: Checkbox(
+                    value: task.isCompleted,
+                    onChanged: (bool? value) {
+                      _toggleTaskCompletion(index); // Use index to toggle
+                    },
+                  ),
+                  trailing: IconButton(
+                    icon: Icon(Icons.close, color: Colors.red),
+                    onPressed: () {
+                      _deleteTask(index); // Delete task when "X" is pressed
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        // FloatingActionButton to add tasks
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            _addTask(context); // Show dialog to add task
+          },
+          backgroundColor: Colors.orange[800],
+          child: Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
