@@ -1,6 +1,8 @@
 import 'package:productivepls/main.dart';
+import 'package:productivepls/monthly.dart';
+
 import 'package:flutter/material.dart';
-import 'package:productivepls/tasksManager.dart';
+import 'package:productivepls/tasks_manager.dart';
 import 'package:intl/intl.dart';
 
 class WeeklyView extends StatefulWidget {
@@ -52,8 +54,8 @@ class _WeeklyViewState extends State<WeeklyView> {
   // Navigate to the previous week
   void _previousWeek() {
     setState(() {
-      DateTime startOfWeek =
-          DateTime.parse(currentWeekStartDate).subtract(Duration(days: 7));
+      DateTime startOfWeek = DateTime.parse(currentWeekStartDate)
+          .subtract(const Duration(days: 7));
       currentWeekStartDate = _getStartOfWeek(startOfWeek);
       currentWeekEndDate = _getEndOfWeek(startOfWeek);
       weeklyTasks = _loadWeeklyTasks();
@@ -64,18 +66,31 @@ class _WeeklyViewState extends State<WeeklyView> {
   void _nextWeek() {
     setState(() {
       DateTime startOfWeek =
-          DateTime.parse(currentWeekStartDate).add(Duration(days: 7));
+          DateTime.parse(currentWeekStartDate).add(const Duration(days: 7));
       currentWeekStartDate = _getStartOfWeek(startOfWeek);
       currentWeekEndDate = _getEndOfWeek(startOfWeek);
       weeklyTasks = _loadWeeklyTasks();
     });
   }
 
+  void _toggleTaskCompletion(String date, int index) async {
+    if ((await weeklyTasks)[date] != null) {
+      // Access the task list safely
+      Task task = (await weeklyTasks)[date]![
+          index]; // Use `!` because null check is already done
+      task.isCompleted = !task.isCompleted;
+      await storage.updateTask(date, index, task);
+      setState(() {
+        weeklyTasks = _loadWeeklyTasks(); // Reload the tasks after updating
+      });
+    } else {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Weekly Tasks'),
+        title: const Text('Weekly Tasks'),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -85,21 +100,39 @@ class _WeeklyViewState extends State<WeeklyView> {
             icon: const Icon(Icons.arrow_forward),
             onPressed: _nextWeek, // Navigate to the next week
           ),
+          IconButton(
+            icon: const Icon(Icons.priority_high),
+            tooltip: 'Daily View',
+            onPressed: () {
+              //navigate to weekly page
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => DailyView()));
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Monthly View',
+            onPressed: () {
+              //navigate to monthly page
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => MonthlyView()));
+            },
+          ),
         ],
       ),
       body: FutureBuilder<Map<String, List<Task>>>(
         future: weeklyTasks,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error loading tasks.'));
+            return const Center(child: Text('Error loading tasks.'));
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No tasks for this week.'));
+            return const Center(child: Text('No tasks for this week.'));
           }
 
           Map<String, List<Task>> tasks = snapshot.data!;
@@ -122,13 +155,14 @@ class _WeeklyViewState extends State<WeeklyView> {
                   );
                 },
                 child: Card(
-                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   elevation: 5,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
-                    padding: EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -142,12 +176,14 @@ class _WeeklyViewState extends State<WeeklyView> {
                                 color: Colors.orange[800],
                               ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         taskList.isEmpty
-                            ? Text('No tasks for today.',
+                            ? const Text('No tasks for today.',
                                 style: TextStyle(color: Colors.grey))
                             : Column(
-                                children: taskList.map((task) {
+                                children: taskList.asMap().entries.map((entry) {
+                                  final index = entry.key; // Get the index
+                                  final task = entry.value; // Get the task
                                   return ListTile(
                                     title: Text(
                                       task.name,
@@ -161,7 +197,9 @@ class _WeeklyViewState extends State<WeeklyView> {
                                     leading: Checkbox(
                                       value: task.isCompleted,
                                       onChanged: (bool? value) {
-                                        // Update task completion status
+                                        // Use the index here
+                                        _toggleTaskCompletion(
+                                            dateString, index);
                                       },
                                     ),
                                   );

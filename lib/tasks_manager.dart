@@ -32,7 +32,7 @@ class TaskStorage {
         _data = json.decode(contents);
       }
     } catch (e) {
-      print('Error loading tasks: $e');
+      //error log prob
     }
   }
 
@@ -41,7 +41,7 @@ class TaskStorage {
       final file = File(_filePath);
       await file.writeAsString(json.encode(_data));
     } catch (e) {
-      print('Error saving tasks: $e');
+      //error log prob
     }
   }
 

@@ -1,11 +1,12 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:productivepls/monthly.dart';
+
 import 'package:window_size/window_size.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import 'package:productivepls/tasksManager.dart';
+import 'package:productivepls/tasks_manager.dart';
 import 'package:productivepls/weekly.dart';
 
 void main() {
@@ -13,7 +14,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isWindows) {
     setWindowTitle("productivepls");
-    const prefSize = Size(900, 1200);
+    const prefSize = Size(900, 1250);
     setWindowMaxSize(prefSize);
     setWindowMinSize(prefSize);
   }
@@ -80,12 +81,12 @@ class _DailyViewState extends State<DailyView> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Add New Task'),
+          title: const Text('Add New Task'),
           content: TextField(
             onChanged: (value) {
               taskName = value;
             },
-            decoration: InputDecoration(hintText: 'Enter task name'),
+            decoration: const InputDecoration(hintText: 'Enter task name'),
           ),
           actions: [
             TextButton(
@@ -100,13 +101,13 @@ class _DailyViewState extends State<DailyView> {
                   Navigator.pop(context);
                 }
               },
-              child: Text('Add'),
+              child: const Text('Add'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
           ],
         );
@@ -127,26 +128,32 @@ class _DailyViewState extends State<DailyView> {
 
   void _changeDate(KeyEvent keyEvent) {
     setState(() {
-      if (keyEvent.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (keyEvent is KeyDownEvent &&
+          keyEvent.logicalKey == LogicalKeyboardKey.arrowUp) {
         // Navigate to the previous day
         currentDate = _getPreviousDate(currentDate);
-      } else if (keyEvent.logicalKey == LogicalKeyboardKey.arrowDown) {
+        tasks = _loadTasks(); // Reload tasks for the new date
+      } else if (keyEvent is KeyDownEvent &&
+          keyEvent.logicalKey == LogicalKeyboardKey.arrowDown) {
         // Navigate to the next day
         currentDate = _getNextDate(currentDate);
+        tasks = _loadTasks(); // Reload tasks for the new date
+      } else if (keyEvent is KeyDownEvent &&
+          keyEvent.logicalKey == LogicalKeyboardKey.equal) {
+        _addTask(context);
       }
-      tasks = _loadTasks(); // Reload tasks for the new date
     });
   }
 
   String _getPreviousDate(String date) {
     DateTime current = DateFormat('yyyy-MM-dd').parse(date);
-    DateTime previousDay = current.subtract(Duration(days: 1));
+    DateTime previousDay = current.subtract(const Duration(days: 1));
     return DateFormat('yyyy-MM-dd').format(previousDay);
   }
 
   String _getNextDate(String date) {
     DateTime current = DateFormat('yyyy-MM-dd').parse(date);
-    DateTime nextDay = current.add(Duration(days: 1));
+    DateTime nextDay = current.add(const Duration(days: 1));
     return DateFormat('yyyy-MM-dd').format(nextDay);
   }
 
@@ -175,6 +182,8 @@ class _DailyViewState extends State<DailyView> {
               tooltip: 'Monthly View',
               onPressed: () {
                 //navigate to monthly page
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => MonthlyView()));
               },
             ),
           ],
@@ -183,15 +192,15 @@ class _DailyViewState extends State<DailyView> {
           future: tasks,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator());
             }
 
             if (snapshot.hasError) {
-              return Center(child: Text('Error loading tasks.'));
+              return const Center(child: Text('Error loading tasks.'));
             }
 
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Center(child: Text('No tasks for today.'));
+              return const Center(child: Text('No tasks for today.'));
             }
 
             List<Task> taskList = snapshot.data!;
@@ -209,7 +218,7 @@ class _DailyViewState extends State<DailyView> {
                     },
                   ),
                   trailing: IconButton(
-                    icon: Icon(Icons.close, color: Colors.red),
+                    icon: const Icon(Icons.close, color: Colors.red),
                     onPressed: () {
                       _deleteTask(index); // Delete task when "X" is pressed
                     },
@@ -225,7 +234,7 @@ class _DailyViewState extends State<DailyView> {
             _addTask(context); // Show dialog to add task
           },
           backgroundColor: Colors.orange[800],
-          child: Icon(Icons.add, color: Colors.white),
+          child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
