@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:productivepls/tasks_manager.dart';
-import 'package:productivepls/main.dart';
 import 'package:productivepls/weekly.dart';
+import 'package:productivepls/daily.dart';
 
 class MonthlyView extends StatefulWidget {
   @override
