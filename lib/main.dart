@@ -31,7 +31,7 @@ class TodoApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         scaffoldBackgroundColor: Colors.orange[50],
       ),
-      home: DailyView(),
+      home: WeeklyView(),
     );
   }
 }
@@ -173,7 +173,7 @@ class _DailyViewState extends State<DailyView> {
               tooltip: 'Weekly View',
               onPressed: () {
                 //navigate to weekly page
-                Navigator.push(context,
+                Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) => WeeklyView()));
               },
             ),
@@ -182,7 +182,7 @@ class _DailyViewState extends State<DailyView> {
               tooltip: 'Monthly View',
               onPressed: () {
                 //navigate to monthly page
-                Navigator.push(context,
+                Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) => MonthlyView()));
               },
             ),

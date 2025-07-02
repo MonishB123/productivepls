@@ -105,7 +105,7 @@ class _WeeklyViewState extends State<WeeklyView> {
             tooltip: 'Daily View',
             onPressed: () {
               //navigate to weekly page
-              Navigator.push(context,
+              Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (context) => DailyView()));
             },
           ),
@@ -114,7 +114,7 @@ class _WeeklyViewState extends State<WeeklyView> {
             tooltip: 'Monthly View',
             onPressed: () {
               //navigate to monthly page
-              Navigator.push(context,
+              Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (context) => MonthlyView()));
             },
           ),
@@ -148,7 +148,7 @@ class _WeeklyViewState extends State<WeeklyView> {
 
               return GestureDetector(
                 onTap: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                         builder: (context) => DailyView(date: dateString)),
