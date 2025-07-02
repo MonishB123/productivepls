@@ -24,7 +24,7 @@ class TodoApp extends StatelessWidget {
       title: 'Productive Pls',
       theme: ThemeData(
         primarySwatch: Colors.orange,
-        scaffoldBackgroundColor: Colors.orange[50],
+        scaffoldBackgroundColor: Color.fromARGB(255, 245, 242, 239),
       ),
       home: WeeklyView(),
     );

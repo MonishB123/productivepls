@@ -108,7 +108,7 @@ class _DailyViewState extends State<DailyView> {
         currentDate = _getNextDate(currentDate);
         tasks = _loadTasks(); // Reload tasks for the new date
       } else if (keyEvent is KeyDownEvent &&
-          keyEvent.logicalKey == LogicalKeyboardKey.enter) {
+          keyEvent.logicalKey == LogicalKeyboardKey.altLeft) {
         _addTask(context);
       }
     });
@@ -136,6 +136,7 @@ class _DailyViewState extends State<DailyView> {
       child: Scaffold(
         appBar: AppBar(
           title: Text('Tasks for $currentDate'),
+          backgroundColor: Color.fromARGB(255, 237, 228, 216),
           actions: <Widget>[
             IconButton(
               icon: const Icon(Icons.view_week),
@@ -199,10 +200,11 @@ class _DailyViewState extends State<DailyView> {
         ),
         // FloatingActionButton to add tasks
         floatingActionButton: FloatingActionButton(
+          elevation: 0,
           onPressed: () {
             _addTask(context); // Show dialog to add task
           },
-          backgroundColor: Colors.orange[800],
+          backgroundColor: const Color.fromARGB(163, 232, 222, 208),
           child: const Icon(Icons.add, color: Colors.white),
         ),
       ),

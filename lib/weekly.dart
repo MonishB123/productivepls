@@ -73,6 +73,49 @@ class _WeeklyViewState extends State<WeeklyView> {
     });
   }
 
+  //Add new task for a day
+  void _addTask(BuildContext context, String date) async {
+    String taskName = ''; // Store the input task name
+
+    // Show dialog to get the task name
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add New Task'),
+          content: TextField(
+            onChanged: (value) {
+              taskName = value;
+            },
+            decoration: const InputDecoration(hintText: 'Enter task name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (taskName.isNotEmpty) {
+                  // Add task to storage if name is not empty
+                  Task newTask = Task(name: taskName);
+                  storage.addTask(date, newTask);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => WeeklyView()),
+                  );
+                }
+              },
+              child: const Text('Add'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _toggleTaskCompletion(String date, int index) async {
     if ((await weeklyTasks)[date] != null) {
       // Access the task list safely
@@ -91,6 +134,7 @@ class _WeeklyViewState extends State<WeeklyView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Weekly Tasks'),
+        backgroundColor: const Color.fromARGB(255, 237, 228, 216),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -166,15 +210,46 @@ class _WeeklyViewState extends State<WeeklyView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '$dayOfWeek, $dateString',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange[800],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              // Day and Task display
+                              '$dayOfWeek, $dateString',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: (dateString ==
+                                            DateFormat('yyyy-MM-dd')
+                                                .format(DateTime.now()))
+                                        ? const Color.fromARGB(
+                                            255, 143, 148, 140)
+                                        : const Color.fromARGB(
+                                            255, 150, 161, 163),
+                                  ),
+                            ),
+                            Container(
+                              //Button to add Tasks
+                              height: 25,
+                              width: 25,
+                              child: FloatingActionButton(
+                                elevation: 0,
+                                heroTag: 'addTask-$dateString',
+                                onPressed: () {
+                                  _addTask(context, dateString);
+                                },
+                                backgroundColor: (dateString ==
+                                        DateFormat('yyyy-MM-dd')
+                                            .format(DateTime.now()))
+                                    ? const Color.fromARGB(255, 143, 148, 140)
+                                    : const Color.fromARGB(255, 150, 161, 163),
+                                child:
+                                    const Icon(Icons.add, color: Colors.white),
                               ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         taskList.isEmpty
@@ -187,14 +262,13 @@ class _WeeklyViewState extends State<WeeklyView> {
                                   return ListTile(
                                     title: Text(
                                       task.name,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 16,
-                                        color: task.isCompleted
-                                            ? Colors.green
-                                            : Colors.black,
                                       ),
                                     ),
                                     leading: Checkbox(
+                                      activeColor:
+                                          const Color.fromARGB(255, 95, 94, 94),
                                       value: task.isCompleted,
                                       onChanged: (bool? value) {
                                         // Use the index here

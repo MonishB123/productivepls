@@ -49,6 +49,7 @@ class _MonthlyViewState extends State<MonthlyView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Monthly View', style: TextStyle(fontSize: 24)),
+        backgroundColor: Color.fromARGB(255, 237, 228, 216),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.priority_high),
