@@ -1,5 +1,6 @@
 import 'package:productivepls/monthly.dart';
 import 'package:productivepls/daily.dart';
+import 'package:productivepls/screenshotbutton.dart';
 
 import 'package:flutter/material.dart';
 import 'package:productivepls/tasks_manager.dart';
@@ -162,6 +163,7 @@ class _WeeklyViewState extends State<WeeklyView> {
                   MaterialPageRoute(builder: (context) => MonthlyView()));
             },
           ),
+          Screenshot_Button(),
         ],
       ),
       body: FutureBuilder<Map<String, List<Task>>>(
