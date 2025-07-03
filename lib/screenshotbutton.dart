@@ -170,7 +170,16 @@ else return only the string null.
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            for (Event event in dialogTasks) {
+                              manager.addTask(
+                                  event.dateTime, Task(name: event.title));
+                              Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => WeeklyView()));
+                            }
+                          },
                           child: const Text(
                             'Add All to Calendar',
                             style: TextStyle(color: Color(0xFF5D576B)),

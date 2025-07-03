@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:productivepls/tasks_manager.dart';
 import 'package:productivepls/weekly.dart';
 import 'package:productivepls/monthly.dart';
+import 'package:productivepls/screenshotbutton.dart';
 
 class DailyView extends StatefulWidget {
   String? date;
@@ -156,6 +157,7 @@ class _DailyViewState extends State<DailyView> {
                     MaterialPageRoute(builder: (context) => MonthlyView()));
               },
             ),
+            Screenshot_Button(context),
           ],
         ),
         body: FutureBuilder<List<Task>>(

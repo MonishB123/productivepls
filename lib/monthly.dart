@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:productivepls/tasks_manager.dart';
 import 'package:productivepls/weekly.dart';
 import 'package:productivepls/daily.dart';
+import 'package:productivepls/screenshotbutton.dart';
 
 class MonthlyView extends StatefulWidget {
   @override
@@ -69,6 +70,7 @@ class _MonthlyViewState extends State<MonthlyView> {
                   MaterialPageRoute(builder: (context) => WeeklyView()));
             },
           ),
+          Screenshot_Button(context),
         ],
       ),
       body: FutureBuilder<void>(
