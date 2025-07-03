@@ -9,17 +9,51 @@ import 'dart:convert';
 import 'package:screen_capturer/screen_capturer.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
+import 'dart:ffi';
+import 'package:win32/win32.dart';
+
+int? _appWindowHandle;
+
+void hideWindow() {
+  final hwnd =
+      GetForegroundWindow(); // Gets the handle of the current active window
+  if (hwnd != 0) {
+    _appWindowHandle = hwnd; // Store the handle
+    ShowWindow(hwnd, SW_HIDE);
+    print('Window hidden.');
+  } else {
+    print('Could not get foreground window handle.');
+  }
+}
+
+void showWindow() {
+  if (_appWindowHandle != null && _appWindowHandle != 0) {
+    ShowWindow(_appWindowHandle!, SW_SHOW);
+    // Add this line to bring the window to the foreground and give it focus
+    SetForegroundWindow(_appWindowHandle!);
+    print('Window shown.');
+    _appWindowHandle = null;
+  } else {
+    print('No window handle stored or window already shown/never hidden.');
+  }
+}
 
 IconButton Screenshot_Button(BuildContext context) {
   return IconButton(
     icon: const Icon(Icons.add_a_photo),
     onPressed: () async {
+      hideWindow(); // Hide the app before capturing
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
       // Prompt screen capture
       CapturedData? capturedData = await screenCapturer.capture(
         mode: CaptureMode.region,
         copyToClipboard: true,
         silent: false,
       );
+
+      showWindow(); // 🔼 Show the app after capture
 
       // Load Gemini key
       await dotenv.load();
