@@ -24,6 +24,8 @@ class TaskStorage {
     'currview': 'daily',
   };
 
+  TaskStorage() {}
+
   Future<void> load() async {
     try {
       final file = File(_filePath);

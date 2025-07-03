@@ -1,77 +1,271 @@
+import 'package:productivepls/tasks_manager.dart';
+import 'package:productivepls/weekly.dart';
+
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'dart:convert';
 
 import 'package:screen_capturer/screen_capturer.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 
-IconButton Screenshot_Button() {
+IconButton Screenshot_Button(BuildContext context) {
   return IconButton(
     icon: const Icon(Icons.add_a_photo),
     onPressed: () async {
-      try {
-        // Prompt screen capture
-        CapturedData? capturedData = await screenCapturer.capture(
-          mode: CaptureMode.region,
-          copyToClipboard: true,
-          silent: false,
-        );
+      // Prompt screen capture
+      CapturedData? capturedData = await screenCapturer.capture(
+        mode: CaptureMode.region,
+        copyToClipboard: true,
+        silent: false,
+      );
 
-        // Load Gemini key
-        await dotenv.load();
-        final String geminiKey = dotenv.get("GEMINI_API_KEY") ?? "";
-        if (geminiKey.isEmpty) {
-          print("Missing GEMINI_API_KEY");
+      // Load Gemini key
+      await dotenv.load();
+      final String geminiKey = dotenv.get("GEMINI_API_KEY");
+      if (geminiKey.isEmpty) {
+        print("Missing GEMINI_API_KEY");
+        return;
+      }
+
+      Gemini model =
+          Gemini.init(apiKey: geminiKey, disableAutoUpdateModelName: true);
+
+      // model.listModels().then((models) {
+      //   for (GeminiModel model in models) {
+      //     print(model.name);
+      //   }
+      // })
+
+      /// list
+      // .catchError((e) => print('listModels'));
+
+      Uint8List? screenshot;
+
+      // Try to use captured data first
+      if (capturedData != null && capturedData.imageBytes != null) {
+        screenshot = capturedData.imageBytes!;
+      }
+
+      // If capture failed, try clipboard as fallback
+      if (screenshot == null) {
+        await Future.delayed(Duration(milliseconds: 300)); // small wait
+        screenshot = await screenCapturer.readImageFromClipboard();
+
+        if (screenshot != null) {
+          print("Fallback: Used image from clipboard");
+        } else {
+          print("Both capture and clipboard failed.");
           return;
         }
-
-        Gemini model =
-            Gemini.init(apiKey: geminiKey, disableAutoUpdateModelName: true);
-
-        model.listModels().then((models) {
-          for (GeminiModel model in models) {
-            print(model.name);
-          }
-        })
-
-            /// list
-            .catchError((e) => print('listModels'));
-
-        Uint8List? screenshot;
-
-        // Try to use captured data first
-        if (capturedData != null && capturedData.imageBytes != null) {
-          screenshot = capturedData.imageBytes!;
-        }
-
-        // If capture failed, try clipboard as fallback
-        if (screenshot == null) {
-          await Future.delayed(Duration(milliseconds: 300)); // small wait
-          screenshot = await screenCapturer.readImageFromClipboard();
-
-          if (screenshot != null) {
-            print("Fallback: Used image from clipboard");
-          } else {
-            print("Both capture and clipboard failed.");
-            return;
-          }
-        }
-
-        // Send to Gemini
-        final result = await model.textAndImage(
-          text: """
-If this is an event that I should put on my calendar, return a JSON object with the following keys:
-events (contains a list of event), event (contains a string called description and a string date in YYYY-MM-DD format),
-else return only the string null
-""",
-          modelName: "gemini-2.0-flash",
-          images: [screenshot],
-        );
-
-        print(result?.content?.toJson()['parts'][0]['text'] ?? "error");
-      } catch (e, stackTrace) {
-        print("Error: $e\n$stackTrace");
       }
+
+      // Send to Gemini
+      final result = await model.textAndImage(
+        text: """
+If this is an event that I should put on my calendar, return a JSON object (no formatting, raw text) with the following keys:
+events (contains a list of event), event (contains a short key string called description (include the hour and minute if provided and not midnight) and a the key string date in YYYY-MM-DD format, ONLY IF NO DATE IS PROVIDED (MAKE SURE TO CHECK IF A DATE ISNT GIVEN PLEASE), use if no date is provided, use the current date, ${DateFormat('yyyy-MM-dd').format(DateTime.now())}),
+else return only the string null.
+""",
+        modelName: "gemini-2.5-flash-lite-preview-06-17",
+        images: [screenshot],
+      );
+      String response =
+          result?.content?.toJson()['parts'][0]['text'] ?? "error";
+
+      if (response == "null") {
+        return;
+      }
+      dynamic jsonResponse = jsonDecode(response);
+      print(jsonResponse['events']);
+
+      List<Event> tasks = [];
+      for (dynamic event in jsonResponse['events']) {
+        tasks.add(Event(title: event['description'], dateTime: event['date']));
+      }
+
+      TaskStorage manager = TaskStorage();
+      manager.load();
+
+      showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext dialogContext) {
+            List<Event> dialogTasks = List<Event>.from(tasks);
+
+            return StatefulBuilder(builder: (context, setState) {
+              return Center(
+                child: Container(
+                  width: 350,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F6F8),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Material(
+                            child: Text(
+                              'New Task Assignments',
+                              style: TextStyle(
+                                color: Color(0xFF5D576B),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close,
+                                color: Color(0xFF5D576B)),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Task List
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: dialogTasks
+                                .map((task) => TaskCard(
+                                      task: task,
+                                      onAccept: () {
+                                        setState(() {
+                                          dialogTasks.remove(task);
+                                        });
+                                        manager.addTask(task.dateTime,
+                                            Task(name: task.title));
+                                      },
+                                      onDecline: () {
+                                        setState(() {
+                                          dialogTasks.remove(task);
+                                        });
+                                      },
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Add All to Calendar Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFC8BFD1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {},
+                          child: const Text(
+                            'Add All to Calendar',
+                            style: TextStyle(color: Color(0xFF5D576B)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            });
+          }).then((_) {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => WeeklyView()));
+      });
     },
   );
+}
+
+class TaskCard extends StatelessWidget {
+  final Event task;
+  final VoidCallback? onAccept;
+  final VoidCallback? onDecline;
+
+  const TaskCard({
+    super.key,
+    required this.task,
+    this.onAccept,
+    this.onDecline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            child: Text(task.title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF5D576B))),
+          ),
+          const SizedBox(height: 4),
+          Material(
+              child: Text(task.dateTime,
+                  style: const TextStyle(color: Color(0xFF5D576B)))),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFA8D0A1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: onAccept,
+                  child: const Text(
+                    'Accept',
+                    style: TextStyle(color: Color(0xFFF8F6F8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE0B3B3),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: onDecline,
+                  child: const Text(
+                    'Decline',
+                    style: TextStyle(color: Color(0xFFF8F6F8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class Event {
+  final String title;
+  final String dateTime;
+
+  Event({required this.title, required this.dateTime});
 }
