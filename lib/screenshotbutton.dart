@@ -53,7 +53,7 @@ IconButton Screenshot_Button(BuildContext context) {
         silent: false,
       );
 
-      showWindow(); // 🔼 Show the app after capture
+      showWindow(); // Show the app after capture
 
       // Load Gemini key
       await dotenv.load();
